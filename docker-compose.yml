@@ -7,6 +7,8 @@ services:
       - database
     networks:
       - cmg-network
+    environment:
+      - DOCKER_NET=cmg-network
 
   database:
     image: postgres:latest
