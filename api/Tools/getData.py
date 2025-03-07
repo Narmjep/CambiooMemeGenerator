@@ -14,6 +14,7 @@ async def main():
         print("URL:", meme.url)
         print("Caption:", meme.caption)
         print("Upvotes:", meme.upvotes)
+        print("Image: " + meme.image[:50] + "...")
         print("-----------------")
 
 

@@ -5,6 +5,8 @@ Contains the main FastAPI application code and routes
 import pg as pg
 from fastapi import FastAPI
 from pydantic import BaseModel
+from typing import Optional
+
 import json
 import requests
 import base64
@@ -16,7 +18,8 @@ class MemeCreationData(BaseModel):
     """Data passed in json format to create a meme
     """
 
-    url: str
+    url: Optional[str] = ""
+    image: Optional[str] = ""
     caption: str
 
 class MemeResponseData(BaseModel):
@@ -77,22 +80,40 @@ def get_url_content(url: str) -> bytes | None:
 
 @app.post("/api/meme/")
 async def create_meme(meme: MemeCreationData) -> dict:
-    """Creates a new meme and stores it in the database
+    """Creates a new meme and stores it in the database.
 
     Args:
-        meme (MemeCreationData): The data must be passed in the request body in json format. If the provided data is invalid, an error response is returned. Additionally, if the url is invalid, an error response is returned
+        meme (MemeCreationData): Data must be passed in JSON format in the request body.
 
     Returns:
-        dict: A success response or an error response
+        dict: A success response or an error response.
     """
-
-    content = get_url_content(meme.url)
-    if content is None:
-        return createErrorResponse("Failed to fetch url content")
     
-    encoded_img = base64.b64encode(content).decode("utf-8")
+    # Ensure that either the url or the image is provided
+    url_set = meme.url != ""
+    image_set = meme.image != ""
 
-    await pg.create_meme(meme.url, meme.caption, encoded_img)
+    if not url_set and not image_set:
+        return createErrorResponse("Either the url or image must be provided")
+    
+    # Prefer URL over image
+    if url_set and image_set:
+        image_set = False
+    
+    if url_set:
+        content = get_url_content(meme.url) # type: ignore
+        if content is None:
+            return createErrorResponse("Failed to fetch URL content")
+        
+        meme.image = base64.b64encode(content).decode("utf-8")
+
+
+    # Ensure both URL and image are stored as empty strings if not set
+    final_url : str = meme.url # type: ignore
+    final_image : str = meme.image # type: ignore
+
+    await pg.create_meme(final_url, meme.caption, final_image)
+    
     return createSuccessResponse()
 
 @app.get("/api/meme/{id}")
@@ -109,6 +130,7 @@ async def get_meme_by_id(id: int) -> dict:
     meme = await pg.get_meme_by_id(id)
     if meme is None:
         return createErrorResponse("Meme not found")
+    
     return createSuccessResponse(MemeResponseData(
         id=meme.id,
         url=meme.url,
@@ -130,6 +152,7 @@ async def vote_meme(id: int, vote: VoteData) -> dict:
 
     if not res:
         return createErrorResponse("Meme not found")
+    
     return createSuccessResponse()
 
 @app.get("/api/meme/top/")
@@ -143,6 +166,7 @@ async def get_top_memes():
     memes = await pg.get_top_ten_memes()
     if memes is None:
         return createErrorResponse("Error fetching memes")
+    
     return createSuccessResponse([MemeResponseData(
         id=meme.id,
         url=meme.url,
@@ -162,6 +186,7 @@ async def get_random_meme():
     meme = await pg.get_random_meme()
     if meme is None:
         return createErrorResponse("Error fetching meme")
+    
     return createSuccessResponse(MemeResponseData(
         id=meme.id,
         url=meme.url,

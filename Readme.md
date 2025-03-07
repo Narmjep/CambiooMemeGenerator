@@ -48,6 +48,17 @@ This endpoint allows you to create a meme. The request body should be a JSON obj
   "caption": "{caption of the meme}"
 }
 ```
+or
+```json
+{
+  "image": "{base64 encoded image}",
+  "caption": "{caption of the meme}"
+}
+```
+
+If both the `url` and `image` fields are provided, the `url` field will be used and the `image` field will be overwritten.
+
+
 
 On success, the api will return a JSON object with the following fields:
 ```json

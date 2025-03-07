@@ -10,6 +10,7 @@ import base64
 api_url = "http://localhost:3000"
 
 example_image_url = "https://upload.wikimedia.org/wikipedia/commons/2/2c/Rotating_earth_%28large%29.gif"
+example2_image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/Cocos_nucifera_%28coconut%29_5_%2838507429165%29.jpg/250px-Cocos_nucifera_%28coconut%29_5_%2838507429165%29.jpg"
 
 
 # ------------------------------------ #
@@ -71,8 +72,8 @@ async def createTestMemes(size : int) -> list:
 
 
 @pytest.mark.asyncio
-async def test_create_meme():
-    """Tests the '/api/meme/' endpoint by creating a meme
+async def test_create_meme_url():
+    """Tests the '/api/meme/' endpoint by creating a meme with a url to an image
     """
 
     await init_connection()
@@ -95,7 +96,18 @@ async def test_create_meme_invalid_url():
     await close_connection()
 
 
-    
+@pytest.mark.asyncio
+async def test_create_meme_image():
+    """Tests the '/api/meme/' endpoint by creating a meme without a url but with a base64 encoded image
+    """
+
+    await init_connection()
+    await destroy_db()
+    await create_table()
+    response = requests.post(f"{api_url}/api/meme/", json={"caption": "Cat", "image": "base64encodedimage"})
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+    await close_connection()
 
 @pytest.mark.asyncio
 async def test_get_meme_by_id():
@@ -105,7 +117,6 @@ async def test_get_meme_by_id():
     await init_connection()
     await destroy_db()
     await create_table()
-    await test_create_meme()
     
     await create_meme(example_image_url, "Cat")
     
@@ -136,8 +147,8 @@ async def test_get_nonexistent_meme():
 # Image
 
 @pytest.mark.asyncio
-async def test_image_integrity():
-    """Tests the integrity of the image data stored in the database by comparing the hash of the original image with the hash of the stored image
+async def test_image_integrity_url():
+    """Tests the integrity of the image data stored in the database by comparing the hash of the original image with the hash of the stored image when the image is provided via a url
     """
 
     await init_connection()
@@ -160,6 +171,57 @@ async def test_image_integrity():
     hash_stored_image = hashlib.md5(image_bytes).hexdigest()
 
     assert original_hash == hash_stored_image
+
+    await close_connection()
+
+@pytest.mark.asyncio
+async def test_image_integrity_base64():
+    """Tests the integrity of the image data stored in the database by comparing the hash of the original image with the hash of the stored image when the image is provided as base64 encoded data
+    """
+
+    await init_connection()
+    await destroy_db()
+    await create_table()
+
+    original_image = requests.get(example_image_url).content
+
+    original_hash = hashlib.md5(original_image).hexdigest()
+
+    encoded_image = base64.b64encode(original_image).decode("utf-8")
+
+    response = requests.post(f"{api_url}/api/meme/", json={"caption": "Cat", "image": encoded_image})   
+
+    res = await get_meme_by_id(1)
+    assert res["status"] == "success"  
+    assert res["data"]["image"] is not None
+    encoded_img = res["data"]["image"]
+    image_bytes = base64.b64decode(encoded_img)
+    hash_stored_image = hashlib.md5(image_bytes).hexdigest()
+
+    assert original_hash == hash_stored_image
+
+    await close_connection()
+
+@pytest.mark.asyncio
+async def test_create_meme_url_and_image():
+    """Tests the '/api/meme/' endpoint by trying to create a meme with both a url and an image
+    """
+
+    await init_connection()
+    await destroy_db()
+    await create_table()
+
+
+    image_hash = hashlib.md5(requests.get(example_image_url).content).hexdigest()
+
+
+    response = requests.post(f"{api_url}/api/meme/", json={"url": example_image_url, "image": "base64encodedimage", "caption": "Cat"})
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+
+    meme = await get_meme_by_id(1)
+    hash = hashlib.md5(base64.b64decode(meme["data"]["image"])).hexdigest()
+    assert hash == image_hash
 
     await close_connection()
 
