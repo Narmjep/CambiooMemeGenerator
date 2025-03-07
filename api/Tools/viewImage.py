@@ -9,7 +9,7 @@ import asyncio
 from sys import argv
 
 api_url = "http://localhost:3000"
-image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Cat_August_2010-4.jpg/1200px-Cat_August_2010-4.jpg"
+
 
 def get_url_content(url: str) -> bytes | None:
     try:
@@ -18,16 +18,6 @@ def get_url_content(url: str) -> bytes | None:
         return response.content
     except requests.exceptions.RequestException as e:
         return None
-    
-with open("original.jpg", "wb") as f:
-    content = get_url_content(image_url)
-    if content is None:
-        print("Failed to fetch url content")
-        exit(1)
-    f.write(content)
-
-
-
 
 def create_meme(url: str, caption: str) -> dict:
     json = {
