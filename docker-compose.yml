@@ -1,0 +1,32 @@
+services:
+  api:
+    build: ./api
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+    depends_on:
+      - database
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/mydb
+    networks:
+      - cmg-network
+
+  database:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - cmg-network
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_DB=cmg
+
+volumes:
+  db-data:
+
+networks:
+  cmg-network:
