@@ -6,6 +6,9 @@ import pg as pg
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Optional
+import io
+import easyocr
+
 
 import json
 import requests
@@ -14,13 +17,28 @@ from enum import Enum
 
 app = FastAPI()
 
+reader = easyocr.Reader(["de"])
+
+
+class VoteType(str, Enum):
+    upvote = "upvote"
+    downvote = "downvote"
+
+class VoteData(BaseModel):
+    """Data passed in json format to upvote or downvote a meme
+    """
+
+    # The type of vote: either "upvote" or "downvote"
+    type: VoteType
+
+
 class MemeCreationData(BaseModel):
     """Data passed in json format to create a meme
     """
 
     url: Optional[str] = ""
     image: Optional[str] = ""
-    caption: str
+    caption: Optional[str] = ""
 
 class MemeResponseData(BaseModel):
     """Data returned in json format by the api
@@ -37,26 +55,13 @@ class MemeResponseData(BaseModel):
     # The base64 encoded image
     image: str
 
-class VoteType(str, Enum):
-    upvote = "upvote"
-    downvote = "downvote"
-
-class VoteData(BaseModel):
-    """Data passed in json format to upvote or downvote a meme
-    """
-
-    # The type of vote: either "upvote" or "downvote"
-    type: VoteType
-
-
-
-
 def createSuccessResponse(data=None):
     if data is None:
         return {"status": "success"}
     return {"status": "success", "data": data}
 
 def createErrorResponse(error):
+    print("Error:", error)
     return {"status": "error", "error": error}
 
 
@@ -77,6 +82,24 @@ def get_url_content(url: str) -> bytes | None:
         return response.content
     except requests.exceptions.RequestException as e:
         return None
+    
+def get_text_from_image(image: bytes) -> str:
+    """Extracts text from an image using easyocr
+
+    Args:
+        image (bytes): The image to extract text from
+
+    Returns:
+        str: The extracted text
+    """
+
+    extracted = reader.readtext(image, detail=0)
+    return " ".join(extracted)
+        
+    
+    
+    
+
 
 @app.post("/api/meme/")
 async def create_meme(meme: MemeCreationData) -> dict:
@@ -93,6 +116,10 @@ async def create_meme(meme: MemeCreationData) -> dict:
     url_set = meme.url != ""
     image_set = meme.image != ""
 
+    image_bytes : bytes
+
+    print("-" * 50)
+
     if not url_set and not image_set:
         return createErrorResponse("Either the url or image must be provided")
     
@@ -103,17 +130,25 @@ async def create_meme(meme: MemeCreationData) -> dict:
     if url_set:
         content = get_url_content(meme.url) # type: ignore
         if content is None:
-            return createErrorResponse("Failed to fetch URL content")
+            return createErrorResponse("Failed to fetch URL content for " + meme.url) # type: ignore
         
         meme.image = base64.b64encode(content).decode("utf-8")
+        image_bytes = content
+    else:
+        try:
+            image_bytes = base64.b64decode(meme.image) # type: ignore
+        except Exception as e:
+            return createErrorResponse("Invalid base64 image")
 
-
-    # Ensure both URL and image are stored as empty strings if not set
-    final_url : str = meme.url # type: ignore
-    final_image : str = meme.image # type: ignore
-
-    await pg.create_meme(final_url, meme.caption, final_image)
-    
+    # Use easyocr to extract text from the image
+    if meme.caption == "":
+        text = get_text_from_image(image_bytes)
+        if text == "":
+            return createErrorResponse("Failed to extract text from image. Make sure the provided image is not too large. Please choose another image or provide a caption.")
+        
+        meme.caption = text
+        
+    await pg.create_meme(meme.url, meme.caption, meme.image) # type: ignore
     return createSuccessResponse()
 
 @app.get("/api/meme/{id}")

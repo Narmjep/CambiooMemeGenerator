@@ -45,18 +45,13 @@ This endpoint allows you to create a meme. The request body should be a JSON obj
 ```json
 {
   "url": "{url to an image}",
-  "caption": "{caption of the meme}"
-}
-```
-or
-```json
-{
-  "image": "{base64 encoded image}",
+  "image" : "{base64 encoded image}",
   "caption": "{caption of the meme}"
 }
 ```
 
-If both the `url` and `image` fields are provided, the `url` field will be used and the `image` field will be overwritten.
+If both the `url` and `image` fields are provided, the `url` field will be used and the `image` field will be overwritten.\
+If no `caption` field is provided, the application uses [easyocr](https://mrwallpaper.com/images/thumbnail/blank-white-portrait-nao34hhkturs9lod.jpg) to extract the text from the image and use it as the caption.
 
 
 
@@ -74,6 +69,22 @@ The `url` field should be a valid url to an image, otherwise the api will return
 {
     "status": "error",
     "error": "Invalid url"
+}
+```
+
+If the `image` field is not a valid base64 encoded image, the api will return the following JSON object:
+```json
+{
+    "status": "error",
+    "error": "Invalid base64 image"
+}
+```
+
+If the OCR engine fails to extract the text from the image, the api will return the following JSON object:
+```json
+{
+    "status": "error",
+    "error": "Failed to extract text from image. Make sure the provided image is not too large. Please choose another image or provide a caption."
 }
 ```
 
@@ -232,6 +243,18 @@ or
 ```bash
 python -m Tools.viewImage {id}
 ```
+
+
+
+# Further Features and Improvements
+
+- Automatic Text Generation: A machine learning model could be used to generate a caption for the meme based on the image. This would require an api key from a service such as [OpenAI](https://beta.openai.com/).
+
+- Templates : Add another tables for templates that contains an image and an uncompleted caption. Create a new endpoint to get a (random) template.
+
+
+
+
 
 
 

@@ -104,7 +104,10 @@ async def test_create_meme_image():
     await init_connection()
     await destroy_db()
     await create_table()
-    response = requests.post(f"{api_url}/api/meme/", json={"caption": "Cat", "image": "base64encodedimage"})
+
+    encoded_image = base64.b64encode(requests.get(example_image_url).content).decode("utf-8")
+
+    response = requests.post(f"{api_url}/api/meme/", json={"caption": "Cat", "image": encoded_image})
     assert response.status_code == 200
     assert response.json()["status"] == "success"
     await close_connection()
@@ -405,4 +408,71 @@ async def test_get_random_meme():
         assert data["caption"] in captions
 
     await close_connection()
+
+
+
+# ------------------------------------ #
+#              OCR                     #
+# ------------------------------------ #
+
+@pytest.mark.asyncio
+async def test_create_image_ocr_en():
+    """
+    Tests the '/api/meme/' endpoint by creating a meme with an image that contains text. The api should extract the text and store it as the caption
+    """
+
+    ocr_image_url = "https://www.slidecow.com/wp-content/uploads/2018/04/Setting-Up-The-Slide-Text-1000x563.jpg"
+    expected_caption = "SMILE"
+
+    await init_connection()
+    await destroy_db()
+    await create_table()
+
+    response = requests.post(f"{api_url}/api/meme/", json={"url": ocr_image_url})
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+
+    res = await get_meme_by_id(1)
+    assert res["status"] == "success"
+    assert res["data"]["caption"] == expected_caption
+
+    await close_connection()
+
+@pytest.mark.asyncio
+async def test_create_image_ocr_de():
+    """
+    Tests the '/api/meme/' endpoint by creating a meme with an image that contains text. The api should extract the text and store it as the caption
+    """
+
+    ocr_image_url = "https://www.w24.at/assets/uploads/mobile/230411_w24_offmaz_spoe_pic.jpg"
+    expected_caption = "spö"
+
+    await init_connection()
+    await destroy_db()
+    await create_table()
+
+    response = requests.post(f"{api_url}/api/meme/", json={"url": ocr_image_url, "ocr_language": "de"})
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+
+    res = await get_meme_by_id(1)
+    assert res["status"] == "success"
+    assert res["data"]["caption"].lower() == expected_caption
+
+    await close_connection()
+
+@pytest.mark.asyncio
+async def test_create_image_ocr_no_text():
+
+    blank_url = "https://mrwallpaper.com/images/thumbnail/blank-white-portrait-nao34hhkturs9lod.jpg"
+
+    await init_connection()
+    await destroy_db()
+    await create_table()
+
+    response = requests.post(f"{api_url}/api/meme/", json={"url": blank_url})
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "error"
+    assert "Failed to extract" in response.json()["error"]
 
