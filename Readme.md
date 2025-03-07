@@ -5,6 +5,8 @@ The application consists of a REST API that provides enpoints to create, read, u
 
 ## Building and Running the Application
 
+### Docker
+
 The project uses docker-compose to run the application. To build the application run the following command:
 
 ```bash
@@ -17,6 +19,15 @@ To run the application run the following command:
 docker-compose up
 ```
  By default, the API will be available at http://localhost:3000 and the database will be available at http://localhost:5432.
+
+### Local
+
+To run the API locally, install the python modules from the [requirements.txt](src/requirements.txt) file.
+Run the API using uvicorn:
+
+```bash
+uvicorn src.main:app --reload
+```
 
 
 ## API Endpoints
@@ -185,6 +196,32 @@ If any other error occurs, a standard HTTP error will be returned.
 ---
 
 ## Testing
+
+To run the tests, install the python modules from the [requirements.txt](Tests/requirements.txt) file.
+Run the tests using pytest:
+
+```bash
+pytest Tests
+```
+
+
+## Tools
+
+Two additional tools are provided to interact with the API:
+
+- getData.py: A python script that lists all the memes in the database but ignores the image.
+- viewImage.py: A python script that downloads and displays the image of a meme and saves both the stored image and the original image form the url in the current directory.
+
+To run the tools, install the python modules from the [requirements.txt](Tools/requirements.txt) file and run:
+
+```bash
+python -m Tools.getData
+```
+or
+```bash
+python -m Tools.viewImage {id}
+```
+
 
 
 
