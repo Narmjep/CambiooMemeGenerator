@@ -20,7 +20,7 @@ services:
       - cmg-network
     environment:
       - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=admin
+      - POSTGRES_PASSWORD=9&SVyC59J@o#
       - POSTGRES_DB=cmg
 
 volumes:

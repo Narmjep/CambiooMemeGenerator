@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, AsyncEngin
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from sqlalchemy import Column, Integer, String, select, func
 import os
+import urllib.parse
 
 if os.getenv("DOCKER_NET") is not None:
     # use docker network if running in docker
@@ -18,10 +19,10 @@ else:
 
 port = 5432
 user = "admin"
-password = "admin"
+password = "9&SVyC59J@o#"
 database = "cmg"
 
-DATABASE_URL = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{database}"
+DATABASE_URL = f"postgresql+asyncpg://{urllib.parse.quote(user)}:{urllib.parse.quote(password)}@{host}:{port}/{database}"
 
 engine : AsyncEngine = create_async_engine(DATABASE_URL, echo=True)
 SessionFactory = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False) # type: ignore -- supresses the 'no overload' error
