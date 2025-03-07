@@ -3,12 +3,8 @@ services:
     build: ./api
     ports:
       - "3000:3000"
-    volumes:
-      - .:/app
     depends_on:
       - database
-    environment:
-      - DATABASE_URL=postgres://postgres:postgres@db:5432/mydb
     networks:
       - cmg-network
 
