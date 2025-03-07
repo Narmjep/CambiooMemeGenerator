@@ -1,6 +1,6 @@
 # Cambioo Meme Generator
 
-An application that allows you to create memes with your own images and text and share them with your colleges.
+An application that allows you to create memes with your own image and caption to share them with your colleagues.
 The application consists of a REST API that provides enpoints to create, read, upvote and downvote memes.\
 
 ## Building and Running the Application
