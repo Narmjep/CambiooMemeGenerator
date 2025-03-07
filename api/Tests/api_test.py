@@ -287,7 +287,7 @@ async def test_get_top_memes():
 
     # Get top 10
     async with httpx.AsyncClient() as client:
-        response = await client.get(f"{api_url}/api/top/")
+        response = await client.get(f"{api_url}/api/meme/top/")
         assert response.status_code == 200
         json = response.json()
         assert json["status"] == "success"
@@ -309,7 +309,7 @@ async def test_get_top_memes_empty_db():
     await create_table()
 
     async with httpx.AsyncClient() as client:
-        response = await client.get(f"{api_url}/api/top/")
+        response = await client.get(f"{api_url}/api/meme/top/")
         assert response.status_code == 200
         json = response.json()
         assert json["status"] == "success"

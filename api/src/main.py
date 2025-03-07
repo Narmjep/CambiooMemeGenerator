@@ -93,7 +93,7 @@ async def create_meme(meme: MemeCreationData) -> dict:
     encoded_img = base64.b64encode(content).decode("utf-8")
 
     await pg.create_meme(meme.url, meme.caption, encoded_img)
-    return {"status": "success"}
+    return createSuccessResponse()
 
 @app.get("/api/meme/{id}")
 async def get_meme_by_id(id: int) -> dict:
@@ -119,7 +119,7 @@ async def get_meme_by_id(id: int) -> dict:
     )
 
 @app.post("/api/meme/{id}/vote/")
-async def upvote_meme(id: int, vote: VoteData) -> dict:
+async def vote_meme(id: int, vote: VoteData) -> dict:
 
     if vote.type == VoteType.upvote:
         res = await pg.upvote_meme(id)
@@ -132,7 +132,7 @@ async def upvote_meme(id: int, vote: VoteData) -> dict:
         return createErrorResponse("Meme not found")
     return createSuccessResponse()
 
-@app.get("/api/top/")
+@app.get("/api/meme/top/")
 async def get_top_memes():
     """Retrieves the top 10 memes by upvotes
 
