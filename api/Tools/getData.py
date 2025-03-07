@@ -1,4 +1,4 @@
-from pg import *
+from src.pg import *
 import asyncio
 
 

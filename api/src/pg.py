@@ -54,16 +54,17 @@ async def get_session():
     async with SessionFactory() as session:
         yield session
 
-async def create_meme(url: str, caption: str):
+async def create_meme(url: str, caption: str, image: str):
     """Stores a meme in the database
 
     Args:
         url (str): the url to an image. The database does not verify that the url is valid
         caption (str): A caption for the meme
+        image (str): The base64 encoded image
     """
     async with get_session() as session:
         async with session.begin():
-            meme = Meme(url=url, caption=caption, upvotes=0)
+            meme = Meme(url=url, caption=caption, upvotes=0, image=image)
             session.add(meme)
             await session.commit()
 

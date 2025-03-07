@@ -1,11 +1,15 @@
 import requests
 import pytest
 import json
-from ..pg import destroy_db, create_table, init_connection, close_connection
+from src.pg import destroy_db, create_table, init_connection, close_connection
 import httpx
 import random
+import hashlib
+import base64
 
 api_url = "http://localhost:3000"
+
+example_image_url = "https://upload.wikimedia.org/wikipedia/commons/2/2c/Rotating_earth_%28large%29.gif"
 
 # Creation
 
@@ -25,9 +29,18 @@ async def test_create_meme():
     await init_connection()
     await destroy_db()
     await create_table()
-    assert create_meme("https://www.google.com", "Cat")
+    assert create_meme(example_image_url, "Cat")
     await close_connection()
 
+@pytest.mark.asyncio
+async def test_create_meme_invalid_url():
+    await init_connection()
+    await destroy_db()
+    await create_table()
+    response = requests.post(f"{api_url}/api/meme/", json={"url": "invalid_url", "caption": "Cat"})
+    assert response.status_code == 200
+    assert response.json()["status"] == "error"
+    await close_connection()
 
 async def get_meme_by_id(id : int) -> dict:
     response = requests.get(f"{api_url}/api/meme/{id}")
@@ -42,7 +55,7 @@ async def test_get_meme_by_id():
     await create_table()
     await test_create_meme()
     
-    await create_meme("https://www.google.com", "Cat")
+    await create_meme(example_image_url, "Cat")
     
     response = requests.get(f"{api_url}/api/meme/1")
     assert response.status_code == 200
@@ -65,6 +78,32 @@ async def test_get_nonexistent_meme():
     assert json["status"] == "error"
     await close_connection()
 
+# Image
+
+@pytest.mark.asyncio
+async def test_image_integrity():
+    await init_connection()
+    await destroy_db()
+    await create_table()
+
+    await create_meme(example_image_url, "Cat")
+
+    original_image = requests.get(example_image_url).content
+    assert original_image is not None
+
+    original_hash = hashlib.md5(original_image).hexdigest()
+
+    res = await get_meme_by_id(1)
+    assert res["status"] == "success"  
+    assert res["data"]["image"] is not None
+    encoded_img = res["data"]["image"]
+    image_bytes = base64.b64decode(encoded_img)
+
+    hash_stored_image = hashlib.md5(image_bytes).hexdigest()
+
+    assert original_hash == hash_stored_image
+
+    await close_connection()
 
 # Upvoting
 
@@ -75,7 +114,7 @@ async def test_upvote_meme():
     await create_table()
 
 
-    await create_meme("https://www.google.com", "Cat")
+    await create_meme(example_image_url, "Cat")
 
     async with httpx.AsyncClient() as client:
         response = await client.get(f"{api_url}/api/meme/1/vote/")
@@ -93,7 +132,7 @@ async def test_multiple_upvotes():
     await destroy_db()
     await create_table()
 
-    await create_meme("https://www.google.com", "Cat")
+    await create_meme(example_image_url, "Cat")
 
     for i in range(10):
         async with httpx.AsyncClient() as client:
@@ -124,14 +163,12 @@ async def test_upvote_nonexistent_meme():
 
 # Top 10
 
-async def createTestMemes(size : int) -> tuple:
-    urls =[]
+async def createTestMemes(size : int) -> list:
     captions = []
     for i in range(size):
-        urls.append(f"https://{i}.com")
         captions.append(f"Caption {i}")
-        await create_meme(urls[i], captions[i])
-    return urls, captions
+        await create_meme(example_image_url, captions[i])
+    return captions
 
 @pytest.mark.asyncio
 async def test_get_top_memes():
@@ -141,7 +178,7 @@ async def test_get_top_memes():
 
     print("-------------------------------------")
     # Create 16 memes
-    urls, captions = await createTestMemes(16)
+    captions = await createTestMemes(16)
 
     # Upvote the first 10
     for i in range(16):
@@ -162,7 +199,6 @@ async def test_get_top_memes():
         for i in range(10):
             # Number one should be the last one
             assert data[i]["caption"] == captions[15-i]
-            assert data[i]["url"] == urls[15-i]
 
     await close_connection()
 
@@ -190,7 +226,7 @@ async def test_get_random_meme():
     await destroy_db()
     await create_table()
 
-    urls, captions = await createTestMemes(10)
+    captions = await createTestMemes(10)
 
     async with httpx.AsyncClient() as client:
         response = await client.get(f"{api_url}/api/meme/random/")
@@ -199,7 +235,6 @@ async def test_get_random_meme():
         assert json["status"] == "success"
         data = json["data"]
         assert data["caption"] in captions
-        assert data["url"] in urls
 
     await close_connection()
 
