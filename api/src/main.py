@@ -8,6 +8,7 @@ from pydantic import BaseModel
 import json
 import requests
 import base64
+from enum import Enum
 
 app = FastAPI()
 
@@ -32,6 +33,20 @@ class MemeResponseData(BaseModel):
     upvotes: int
     # The base64 encoded image
     image: str
+
+class VoteType(str, Enum):
+    upvote = "upvote"
+    downvote = "downvote"
+
+class VoteData(BaseModel):
+    """Data passed in json format to upvote or downvote a meme
+    """
+
+    # The type of vote: either "upvote" or "downvote"
+    type: VoteType
+
+
+
 
 def createSuccessResponse(data=None):
     if data is None:
@@ -103,10 +118,16 @@ async def get_meme_by_id(id: int) -> dict:
         )
     )
 
-@app.get("/api/meme/{id}/vote/")
-async def upvote_meme(id: int):
+@app.post("/api/meme/{id}/vote/")
+async def upvote_meme(id: int, vote: VoteData) -> dict:
 
-    res = await pg.upvote_meme(id)
+    if vote.type == VoteType.upvote:
+        res = await pg.upvote_meme(id)
+    elif vote.type == VoteType.downvote:
+        res = await pg.downvote_meme(id)
+    else:
+        return createErrorResponse("Invalid vote type")
+
     if not res:
         return createErrorResponse("Meme not found")
     return createSuccessResponse()

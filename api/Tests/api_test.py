@@ -180,7 +180,7 @@ async def test_upvote_meme():
     await create_meme(example_image_url, "Cat")
 
     async with httpx.AsyncClient() as client:
-        response = await client.get(f"{api_url}/api/meme/1/vote/")
+        response = await client.post(f"{api_url}/api/meme/1/vote/", json={"type": "upvote"})
     
     assert response.status_code == 200
     json = response.json()
@@ -202,7 +202,7 @@ async def test_multiple_upvotes():
 
     for i in range(10):
         async with httpx.AsyncClient() as client:
-            response = await client.get(f"{api_url}/api/meme/1/vote/")
+            response = await client.post(f"{api_url}/api/meme/1/vote/", json={"type": "upvote"})
             assert response.status_code == 200
             assert response.json()["status"] == "success"
 
@@ -221,7 +221,7 @@ async def test_upvote_nonexistent_meme():
     await create_table()
 
     async with httpx.AsyncClient() as client:
-        response = await client.get(f"{api_url}/api/meme/1/vote/")
+        response = await client.post(f"{api_url}/api/meme/1/vote/", json={"type": "upvote"})
     
     assert response.status_code == 200
     json = response.json()
@@ -230,7 +230,39 @@ async def test_upvote_nonexistent_meme():
     await close_connection()
 
 
-# Top 10
+@pytest.mark.asyncio
+async def test_downvote_meme():
+    """ Tests the '/api/meme/{id}/vote/' endpoint by creating a meme, upvoting it and then downvoting it
+    """
+
+    await init_connection()
+    await destroy_db()
+    await create_table()
+
+    await create_meme(example_image_url, "Cat")
+
+    for i in range(10):
+        async with httpx.AsyncClient() as client:
+            response = await client.post(f"{api_url}/api/meme/1/vote/", json={"type": "upvote"})
+            assert response.status_code == 200
+            assert response.json()["status"] == "success"
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(f"{api_url}/api/meme/1/vote/", json={"type": "downvote"})
+        assert response.status_code == 200
+        assert response.json()["status"] == "success"
+
+    res = await get_meme_by_id(1)
+    assert res["data"]["upvotes"] == 9
+
+    await close_connection()
+    
+
+
+
+# ------------------------------------ #
+#              Top  10 memes           #
+# ------------------------------------ #
 
 @pytest.mark.asyncio
 async def test_get_top_memes():
@@ -249,7 +281,7 @@ async def test_get_top_memes():
     for i in range(16):
         for j in range(i):
             async with httpx.AsyncClient() as client:
-                response = await client.get(f"{api_url}/api/meme/{i+1}/vote/")
+                response = await client.post(f"{api_url}/api/meme/{i+1}/vote/", json={"type": "upvote"})
                 assert response.status_code == 200
                 assert response.json()["status"] == "success"
 
@@ -286,7 +318,10 @@ async def test_get_top_memes_empty_db():
 
     await close_connection()
 
-# Random
+
+# ------------------------------------ #
+#              Random                  #
+# ------------------------------------ #
 
 @pytest.mark.asyncio
 async def test_get_random_meme():

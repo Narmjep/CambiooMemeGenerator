@@ -168,7 +168,10 @@ async def downvote_meme(id: int) -> bool:
             meme = result.scalars().first()
             if meme is None:
                 return False
-            meme.upvotes -= 1
+            
+            if meme.upvotes > 0:
+                meme.upvotes -= 1
+
             await session.commit()
             return True
 
