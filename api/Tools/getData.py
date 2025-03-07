@@ -1,3 +1,7 @@
+"""
+A tool that displays all memes in the database
+"""
+
 from src.pg import *
 import asyncio
 

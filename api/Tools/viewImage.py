@@ -1,5 +1,12 @@
+"""
+A tool that retrieves the image of a meme by its id. The original image and the image from the database are saved to the current directory.
+"""
+
+
 import requests
 import base64
+import asyncio
+from sys import argv
 
 api_url = "http://localhost:3000"
 image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Cat_August_2010-4.jpg/1200px-Cat_August_2010-4.jpg"
@@ -32,22 +39,39 @@ def create_meme(url: str, caption: str) -> dict:
     assert response.json()["status"] == "success"
     return response.json()
 
-create_meme(image_url, "Cat")
+async def get_meme_by_id(id : int) -> dict:
+    """Helper function that retrieves a meme by its id
 
-url = "http://localhost:3000/api/meme/random/"
+    Args:
+        id (int): The id of the meme
 
-response = requests.get(url)
+    Returns:
+        dict: The response from the api
+    """
+    response = requests.get(f"{api_url}/api/meme/{id}")
+    assert response.status_code == 200
+    return response.json()
 
-assert response.status_code == 200
-assert response.json()["status"] == "success"
-assert len(response.json()["data"]) > 0
+async def main():
+    id : int = int(argv[1])
+    response = await get_meme_by_id(id)
 
-encoded_image : str = response.json()["data"]["image"]
-image_bytes = base64.b64decode(encoded_image)
+    encoded_image : str = response["data"]["image"]
+    image_bytes = base64.b64decode(encoded_image)
+    image_name = response["data"]["url"].split("/")[-1]
 
-image_name = response.json()["data"]["url"].split("/")[-1]
+    original_image = get_url_content(response["data"]["url"])
+    if original_image is None:
+        print("Failed to fetch url content")
+        exit(1)
 
-with open(f"{image_name}", "wb") as f:
-    f.write(image_bytes)
+    with open(f"original_{image_name}", "wb") as f:
+        f.write(original_image)
 
-print("Image saved")
+    with open(f"{image_name}", "wb") as f:
+        f.write(image_bytes)
+
+    print("Image saved")
+
+if __name__ == "__main__":
+    asyncio.run(main())
